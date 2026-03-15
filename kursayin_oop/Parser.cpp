@@ -13,6 +13,19 @@ void Parser::eat(TokenType type) {
 
 std::shared_ptr<Node> Parser::factor() {
     Token tok = currentToken;
+
+    // --- FIX: Handle Unary Minus (-5) and Unary Plus (+5) ---
+    if (tok.type == TokenType::Minus) {
+        eat(TokenType::Minus);
+        // We treat -x as (0 - x) by creating a BinOpNode with a 0 constant
+        auto zero = std::make_shared<NumberNode>(0.0);
+        return std::make_shared<BinOpNode>(zero, '-', factor());
+    } else if (tok.type == TokenType::Plus) {
+        eat(TokenType::Plus);
+        return factor(); // +5 is just 5, so we just move to the next part
+    }
+    // -------------------------------------------------------
+
     if (tok.type == TokenType::Number) {
         eat(TokenType::Number);
         return std::make_shared<NumberNode>(std::stod(tok.value));
@@ -25,7 +38,7 @@ std::shared_ptr<Node> Parser::factor() {
         eat(TokenType::RParen);
         return node;
     }
-    throw std::runtime_error("Invalid factor");
+    throw std::runtime_error("RUNTIME ERROR: Invalid factor '" + tok.value + "'");
 }
 
 std::shared_ptr<Node> Parser::term() {

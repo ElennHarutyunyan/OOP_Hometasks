@@ -1,33 +1,53 @@
 #include "Evaluator.h"
-#include <stdexcept>
 #include <iostream>
+#include <stdexcept>
 
-void Evaluator::visit(std::shared_ptr<Node> node) {
-    if (auto n = std::dynamic_pointer_cast<StatementsNode>(node)) {
-        for (auto &stmt : n->statements) visit(stmt);
-    } else if (auto n = std::dynamic_pointer_cast<PrintNode>(node)) {
-        std::cout << evaluate(n->expr) << std::endl;
-    } else if (auto n = std::dynamic_pointer_cast<AssignNode>(node)) {
-        symbols.set(n->name, evaluate(n->value));
-    } else {
-        evaluate(node);
-    }
+void Evaluator::run(std::shared_ptr<StatementsNode> root) {
+    if (!root) return;
+
+    // 1. "Compile" the tree into a linear list of instructions
+    // This fills our 'program' vector and 'rv' (Result Vector) indices
+    root->flatten(program, rv, varMap);
+
+    // 2. Start the iterative execution loop
+    execute();
 }
 
-double Evaluator::evaluate(std::shared_ptr<Node> node) {
-    if (auto n = std::dynamic_pointer_cast<NumberNode>(node)) {
-        return n->value;
-    } else if (auto n = std::dynamic_pointer_cast<VarNode>(node)) {
-        return symbols.get(n->name);
-    } else if (auto n = std::dynamic_pointer_cast<BinOpNode>(node)) {
-        double left = evaluate(n->left);
-        double right = evaluate(n->right);
-        switch (n->op) {
-            case '+': return left + right;
-            case '-': return left - right;
-            case '*': return left * right;
-            case '/': return left / right;
+void Evaluator::execute() {
+    // This is the Fetch-Decode-Execute loop from your notes
+    for (size_t pc = 0; pc < program.size(); ++pc) {
+        // FETCH
+        Line& instr = program[pc];
+
+        // DECODE & EXECUTE
+        // We look up values in 'rv' using the indices stored in the instruction
+        switch (instr.op) {
+            case '+':
+                rv[instr.resIdx] = rv[instr.leftIdx] + rv[instr.rightIdx];
+                break;
+            case '-':
+                rv[instr.resIdx] = rv[instr.leftIdx] - rv[instr.rightIdx];
+                break;
+            case '*':
+                rv[instr.resIdx] = rv[instr.leftIdx] * rv[instr.rightIdx];
+                break;
+            case '/':
+                if (rv[instr.rightIdx] == 0) throw std::runtime_error("Division by zero");
+                rv[instr.resIdx] = rv[instr.leftIdx] / rv[instr.rightIdx];
+                break;
+            case '=':
+                // Assignment: copy value from right operand index to target index
+                rv[instr.resIdx] = rv[instr.leftIdx];
+                break;
+            case 'P':
+                // Print: output the value stored at the leftIdx
+                std::cout << rv[instr.leftIdx] << std::endl;
+                break;
+            default:
+                throw std::runtime_error("Unknown operation in instruction stream");
         }
+        
+        // Optional: Print the state of rv for every step to show the teacher
+        // std::cout << "[Step " << pc << "] op: " << instr.op << " result: " << rv[instr.resIdx] << std::endl;
     }
-    throw std::runtime_error("Unknown node");
 }

@@ -4,8 +4,11 @@
 Parser::Parser(Lexer l) : lexer(l), currentToken(lexer.getNextToken()) {}
 
 void Parser::eat(TokenType type) {
-    if (currentToken.type == type) currentToken = lexer.getNextToken();
-    else throw std::runtime_error("Unexpected token");
+    if (currentToken.type == type) {
+        currentToken = lexer.getNextToken();
+    } else {
+        throw std::runtime_error("Unexpected token");
+    }
 }
 
 std::shared_ptr<Node> Parser::factor() {
@@ -54,10 +57,12 @@ std::shared_ptr<Node> Parser::statement() {
     } else if (currentToken.type == TokenType::Identifier) {
         std::string varName = currentToken.value;
         eat(TokenType::Identifier);
-        eat(TokenType::Assign);
-        auto valueNode = expr();
-        eat(TokenType::Semicolon);
-        return std::make_shared<AssignNode>(varName, valueNode);
+        if (currentToken.type == TokenType::Assign) {
+            eat(TokenType::Assign);
+            auto valueNode = expr();
+            eat(TokenType::Semicolon);
+            return std::make_shared<AssignNode>(varName, valueNode);
+        }
     }
     return nullptr;
 }

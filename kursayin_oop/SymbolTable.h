@@ -5,11 +5,13 @@
 #include <unordered_map>
 
 class SymbolTable {
-    std::unordered_map<std::string, double> table;
+private:
+    std::unordered_map<std::string, int> table;
+
 public:
-    void set(const std::string &name, double value);
-    double get(const std::string &name);
-    bool exists(const std::string &name);
+    void set(const std::string &name, int index);
+    int get(const std::string &name) const;
+    bool exists(const std::string &name) const;
 };
 
-#endif // SYMBOLTABLE_H
+#endif
